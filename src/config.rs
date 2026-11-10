@@ -115,7 +115,7 @@ pub fn is_argb(text: &str) -> bool {
     text.len() == 9 && text.starts_with('#') && text[1..].chars().all(|c| c.is_ascii_hexdigit())
 }
 
-pub fn normalize(r: &mut Value, extra_languages: &[String]) {
+pub fn normalize(r: &mut Value, _extra_languages: &[String]) {
     set_allowed(r, "summary", &["summary", "list", "split"], &["multiTask", "displayMode"]);
     for source in ["desktop", "vscode", "defaultCli", "deepSeekCli", "claudeDesktop", "claudeCli", "deepseekHarness"] {
         set_bool(r, true, &["sessionSources", source]);
@@ -127,10 +127,7 @@ pub fn normalize(r: &mut Value, extra_languages: &[String]) {
     set_int_clamped(r, 6, 1, 12, &["multiTask", "maxSplitBubbles"]);
     set_int_clamped(r, 120, 0, 3600, &["multiTask", "numberCooldownSeconds"]);
 
-    let language = str_or(r, &["language"], "en");
-    if !matches!(language.as_str(), "zh-CN" | "en" | "symbols") && !extra_languages.contains(&language) {
-        r["language"] = Value::from("en");
-    }
+    r["language"] = Value::from("en");
 
     set_bool(r, false, &["behavior", "openTaskOnDoubleClick"]);
     set_bool(r, false, &["behavior", "idleIndicator", "enabled"]);

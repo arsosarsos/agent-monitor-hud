@@ -39,18 +39,12 @@ pub struct Tray {
     added: bool,
 }
 
-fn bi(zh: &Locale, en: &Locale, key: &str) -> String {
-    format!("{} / {}", zh.get(key), en.get(key))
+fn bi(_zh: &Locale, en: &Locale, key: &str) -> String {
+    en.get(key).to_string()
 }
 
-fn status_line(zh: &Locale, en: &Locale, status: &str) -> String {
-    format!(
-        "{} / {}: {} ({})",
-        zh.get("statusLabel"),
-        en.get("statusLabel"),
-        zh.get(status_key(status)),
-        en.get(status_key(status))
-    )
+fn status_line(_zh: &Locale, en: &Locale, status: &str) -> String {
+    format!("{}: {}", en.get("statusLabel"), en.get(status_key(status)))
 }
 
 fn fill(buffer: &mut [u16], text: &str) {
@@ -165,7 +159,7 @@ pub fn show_context_menu(owner: HWND, state: &MenuState, at: POINT) -> Option<Me
         let sub = view_submenu(state);
         let _ = AppendMenuW(menu, MF_POPUP, sub.0 as usize, &HSTRING::from(bi(state.zh, state.en, "displayMode")));
         let _ = AppendMenuW(menu, MF_SEPARATOR, 0, PCWSTR::null());
-        append(menu, MenuCommand::Exit as u32, &format!("{} HUD / {} HUD", state.zh.get("exit"), state.en.get("exit")), false, true);
+        append(menu, MenuCommand::Exit as u32, &format!("{} HUD", state.en.get("exit")), false, true);
         track(owner, menu, at)
     }
 }
@@ -183,7 +177,7 @@ pub fn show_tray_menu(owner: HWND, state: &MenuState, at: POINT) -> Option<MenuC
         append(menu, MenuCommand::TogglePause as u32, &bi(state.zh, state.en, if state.paused { "resume" } else { "pause" }), false, true);
         append(menu, MenuCommand::ToggleDock as u32, &bi(state.zh, state.en, if state.docked { "undockCodex" } else { "dockCodex" }), false, true);
         let _ = AppendMenuW(menu, MF_SEPARATOR, 0, PCWSTR::null());
-        append(menu, MenuCommand::Exit as u32, &format!("{} HUD / {} HUD", state.zh.get("exit"), state.en.get("exit")), false, true);
+        append(menu, MenuCommand::Exit as u32, &format!("{} HUD", state.en.get("exit")), false, true);
         track(owner, menu, at)
     }
 }

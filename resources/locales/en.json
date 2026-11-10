@@ -388,7 +388,7 @@
   "pageTasksHint": "Task list, separate task bubbles and how long tasks stay.",
   "pageAlertsHint": "Context alerts, the quota guard and agent notices.",
   "pageAgentsHint": "Which agents to monitor, plan usage and balance.",
-  "grpLanguagePosition": "Language & position",
+  "grpLanguagePosition": "Position",
   "grpNumbersPricing": "Numbers & pricing",
   "grpStyle": "Style",
   "grpColors": "Colours",

@@ -1,5 +1,12 @@
 # Install with an agent (Codex or Claude Code)
 
+> **AL fork:** do not follow the upstream release manifest below to install AL:
+> it downloads the original project. Build this fork with `cargo build --release`
+> on Windows with MSVC, back up any existing installation, and pass the resulting
+> executable to this fork's `scripts/install.ps1` using `-Exe`. Use `-NoClaude`
+> when installing for Codex only. The upstream procedure below describes the
+> original project, not an AL release.
+
 This is the canonical agent procedure. A repository URL plus "install this" / “帮我安装” is enough.
 Do not infer installation commands from other documents.
 

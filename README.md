@@ -1,5 +1,10 @@
 # Agent Monitor HUD
 
+> **AL fork:** the window-docking changes are built from this repository.
+> The upstream release links and install manifest below refer to the original
+> project and do not contain the AL changes. Build the AL fork from source to
+> install it; preserve a backup of an existing installation first.
+
 > [简体中文](README.zh-CN.md) · Windows x64 · formerly **Codex Monitor HUD**
 
 A small, always-on-top overlay that shows what your coding agents are doing right now — **Codex**,

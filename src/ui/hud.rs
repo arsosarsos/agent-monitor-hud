@@ -462,7 +462,7 @@ fn content_panel(c: &Ctx, m: &MainModel, status: &str, attention: bool, actions:
             .m(Th::new(0.0, 0.0, d.header_gap * type_scale(s) + SPREAD_GAP * 0.4 * m.spread.0, 0.0))
             .va(Align::Center)
             .collapsed(!s.show_status_dot)
-            .tip(format!("{} ({})", c.zh.get(status_key(status)), c.en.get(status_key(status))))
+            .tip(c.en.get(status_key(status)).to_string())
             .fx(fx_key("main.dot"))
             .at(0, 0),
     );

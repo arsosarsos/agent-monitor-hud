@@ -329,15 +329,9 @@ pub fn page(ui: &Ui, b: &mut Builder) -> El {
 // --------------------------------------------------------------------- pages
 
 fn general(ui: &Ui, b: &mut Builder) -> El {
-    let language_items = vec![
-        (Value::from("zh-CN"), format!("{} ({})", ui.zh.get("languageZh"), ui.en.get("languageZh"))),
-        (Value::from("en"), format!("{} ({})", ui.en.get("languageEn"), ui.zh.get("languageEn"))),
-        (Value::from("symbols"), format!("{} ({})", ui.zh.get("languageSymbols"), ui.en.get("languageSymbols"))),
-    ];
     let place = group(
         ui.opt("grpLanguagePosition"),
         vec![
-            row(format!("{} / {}", ui.zh.get("displayLanguage"), ui.en.get("displayLanguage")), None, Some(combo(ui, b, &["language"], language_items))),
             row(
                 ui.t("position"),
                 ui.opt("positionHint"),
