@@ -271,6 +271,7 @@
   "numberAuto": "智能切换",
   "position": "预设位置",
   "positionCustom": "当前位置（已拖动）",
+  "positionCodex": "贴靠 Codex 窗口",
   "positionTopRight": "右上",
   "positionTopCenter": "顶部居中",
   "positionTopLeft": "左上",

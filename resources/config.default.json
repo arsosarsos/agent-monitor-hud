@@ -95,6 +95,8 @@
   },
   "separator": "dot",
   "position": "top-right",
+  "dockEdge": "top",
+  "dockOffset": 0,
   "customLeft": null,
   "customTop": null,
   "fontSize": 14.0,

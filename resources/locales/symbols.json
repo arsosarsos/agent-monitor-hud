@@ -253,6 +253,7 @@
   "numberAuto": "Automatic",
   "position": "Preset position",
   "positionCustom": "Current dragged position",
+  "positionCodex": "Dock to Codex window",
   "positionTopRight": "Top right",
   "positionTopCenter": "Top center",
   "positionTopLeft": "Top left",

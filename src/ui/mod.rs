@@ -1,6 +1,8 @@
 pub mod anim;
 pub mod app;
 pub mod color;
+mod dock_geometry;
+mod dock_window;
 pub mod gfx;
 pub mod hud;
 pub mod image;

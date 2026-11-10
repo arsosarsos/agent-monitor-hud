@@ -120,6 +120,7 @@ pub struct App {
     drag: Option<Drag>,
     paused: bool,
     hidden: bool,
+    dock_hidden: bool,
     managed: bool,
     started_at: i64,
     last_config_stamp: Option<fsx::FileStamp>,
@@ -205,6 +206,7 @@ pub fn run(args: &[String]) -> i32 {
         drag: None,
         paused: false,
         hidden: false,
+        dock_hidden: false,
         managed,
         started_at: time::now_ms(),
         list_scroll: 0.0,
@@ -595,7 +597,7 @@ impl App {
     }
 
     pub fn render(&mut self) {
-        if self.hidden {
+        if self.hidden || self.dock_hidden {
             return;
         }
         self.update_quiet();
@@ -699,7 +701,15 @@ impl App {
         let scale = self.main.dpi();
         let inset = (hud::MAIN_INSET * self.main.scale).round() as i32;
         let s = &self.settings;
-        let pos = if s.position == "custom" {
+        let pos = if s.position == "dock-codex" {
+            let edge = match self.document["dockEdge"].as_str().unwrap_or("top") {
+                "left" => super::dock_geometry::Edge::Left,
+                "right" => super::dock_geometry::Edge::Right,
+                "bottom" => super::dock_geometry::Edge::Bottom,
+                _ => super::dock_geometry::Edge::Top,
+            };
+            super::dock_window::codex_rect().map(|rect| super::dock_geometry::dock_position(edge, rect, (w, h), self.document["dockOffset"].as_i64().unwrap_or(0).clamp(0, i32::MAX as i64) as i32)).unwrap_or(self.main.pos)
+        } else if s.position == "custom" {
             let left = s.custom_left.map(|v| (v * scale as f64).round() as i32).unwrap_or(self.main.pos.0 + inset);
             let top = s.custom_top.map(|v| (v * scale as f64).round() as i32).unwrap_or(self.main.pos.1 + inset);
             let target = monitor_for_point(POINT { x: left, y: top });
@@ -1217,6 +1227,7 @@ impl App {
     }
 
     fn on_quiet_tick(&mut self) {
+        self.update_dock();
         let before = (self.quiet, self.bubbles.values().map(|b| b.collapsed).collect::<Vec<_>>());
         self.update_quiet();
         let after = (self.quiet, self.bubbles.values().map(|b| b.collapsed).collect::<Vec<_>>());
@@ -1226,6 +1237,28 @@ impl App {
         self.check_external_config();
         if let Some(pending) = self.tooltip.pending.as_ref() {
             let _ = pending;
+        }
+    }
+
+    fn update_dock(&mut self) {
+        let attached = self.settings.position == "dock-codex";
+        let unavailable = attached && super::dock_window::codex_rect().is_none();
+        if unavailable && !self.dock_hidden {
+            self.dock_hidden = true;
+            self.main.hide();
+            for bubble in self.bubbles.values_mut() { bubble.surface.hide(); }
+            if let Some((_, _, surface)) = self.notice.as_mut() { surface.hide(); }
+        } else if !unavailable && self.dock_hidden {
+            self.dock_hidden = false;
+            if !self.hidden { self.main.show(false); self.render(); }
+        } else if attached && !self.hidden && !unavailable && self.drag.is_none() {
+            let old = self.main.pos;
+            self.position_main();
+            if old != self.main.pos {
+                self.paint(self.main.hwnd);
+                self.position_bubbles();
+                for bubble in self.bubbles.values_mut() { bubble.surface.present(); }
+            }
         }
     }
 
@@ -1455,6 +1488,24 @@ impl App {
         match drag.kind {
             DragKind::Move { moved: true, .. } => {
                 if hwnd == self.main.hwnd {
+                    if self.settings.position == "dock-codex" {
+                        if let Some(rect) = super::dock_window::codex_rect() {
+                            let (x, y) = self.main.pos;
+                            let (w, h) = self.main.px_size();
+                            let edge = super::dock_geometry::nearest_edge(rect, (x, y, x + w, y + h));
+                            let (name, offset) = match edge {
+                                super::dock_geometry::Edge::Left => ("left", y - rect.1),
+                                super::dock_geometry::Edge::Right => ("right", y - rect.1),
+                                super::dock_geometry::Edge::Top => ("top", x - rect.0),
+                                super::dock_geometry::Edge::Bottom => ("bottom", x - rect.0),
+                            };
+                            self.document["dockEdge"] = Value::from(name);
+                            self.document["dockOffset"] = Value::from(offset.max(0));
+                            self.save_settings();
+                            self.render();
+                        }
+                        return;
+                    }
                     let scale = self.main.dpi() as f64;
                     let inset = (hud::MAIN_INSET * self.main.scale) as f64;
                     let left = (self.main.pos.0 as f64 + inset) / scale;

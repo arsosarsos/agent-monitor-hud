@@ -119,6 +119,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -File $HOME\plugins\codex-monitor-
 
 ## Everyday controls
 
+This fork adds **General → Position → Dock to Codex window**. Drag the main HUD
+near an edge of Codex Desktop and release it to snap there. The HUD follows
+that window and hides while Codex is minimized or unavailable. Select another
+position to return to the standard placement. This mode detects the packaged
+Windows Codex Desktop app and currently targets one window at a time.
+
 - Click the count pill to expand or collapse the task list.
 - Drag the HUD anywhere; double-click it (or use the shortcut / tray icon) to open Settings.
 - Detach one task, or **Split all**, from the HUD or the tray menu.

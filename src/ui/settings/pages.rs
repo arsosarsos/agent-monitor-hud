@@ -345,7 +345,7 @@ fn general(ui: &Ui, b: &mut Builder) -> El {
                     ui,
                     b,
                     &["position"],
-                    s_items(ui, &[("custom", "positionCustom"), ("top-right", "positionTopRight"), ("top-center", "positionTopCenter"), ("top-left", "positionTopLeft"), ("bottom-right", "positionBottomRight"), ("bottom-center", "positionBottomCenter"), ("bottom-left", "positionBottomLeft")]),
+                    s_items(ui, &[("custom", "positionCustom"), ("dock-codex", "positionCodex"), ("top-right", "positionTopRight"), ("top-center", "positionTopCenter"), ("top-left", "positionTopLeft"), ("bottom-right", "positionBottomRight"), ("bottom-center", "positionBottomCenter"), ("bottom-left", "positionBottomLeft")]),
                 )),
             ),
             switch_row(ui, b, &["alwaysOnTop"], "alwaysOnTop", None),
