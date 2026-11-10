@@ -1,11 +1,34 @@
 use windows::core::{BOOL, PWSTR};
 use std::cell::Cell;
-use windows::Win32::Foundation::{CloseHandle, HWND, LPARAM, POINT, RECT};
+use windows::Win32::Foundation::{CloseHandle, HWND, LPARAM, POINT, RECT, WPARAM};
 use windows::Win32::Graphics::Gdi::ClientToScreen;
 use windows::Win32::System::Threading::{OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_FORMAT, PROCESS_QUERY_LIMITED_INFORMATION};
-use windows::Win32::UI::WindowsAndMessaging::{EnumWindows, GetClientRect, GetWindowTextLengthW, GetWindowThreadProcessId, IsIconic, IsWindow, IsWindowVisible};
+use windows::Win32::UI::Accessibility::{HWINEVENTHOOK, SetWinEventHook, UnhookWinEvent};
+use windows::Win32::UI::WindowsAndMessaging::{EnumWindows, GetClientRect, GetWindowTextLengthW, GetWindowThreadProcessId, IsIconic, IsWindow, IsWindowVisible, PostMessageW, EVENT_OBJECT_LOCATIONCHANGE, WINEVENT_OUTOFCONTEXT, WINEVENT_SKIPOWNPROCESS};
 
-thread_local! { static TARGET: Cell<(isize, u32)> = const { Cell::new((0, 0)) }; }
+thread_local! {
+    static TARGET: Cell<(isize, u32)> = const { Cell::new((0, 0)) };
+    static HOOK: Cell<isize> = const { Cell::new(0) };
+    static NOTIFY: Cell<isize> = const { Cell::new(0) };
+}
+
+pub fn initialize(hwnd: HWND) { NOTIFY.with(|n| n.set(hwnd.0 as isize)); }
+
+pub fn unwatch() {
+    HOOK.with(|hook| {
+        let old = hook.replace(0);
+        if old != 0 { unsafe { let _ = UnhookWinEvent(HWINEVENTHOOK(old as *mut _)); } }
+    });
+    TARGET.with(|target| target.set((0, 0)));
+}
+
+unsafe extern "system" fn location_changed(_: HWINEVENTHOOK, _: u32, hwnd: HWND, object: i32, child: i32, _: u32, _: u32) {
+    if object != 0 || child != 0 || !TARGET.with(|target| target.get().0 == hwnd.0 as isize) { return; }
+    NOTIFY.with(|n| {
+        let dest = n.get();
+        if dest != 0 { unsafe { let _ = PostMessageW(Some(HWND(dest as *mut _)), super::app::WM_APP_DOCK, WPARAM(0), LPARAM(0)); } }
+    });
+}
 
 /// Find the Codex Desktop window by its packaged executable path, not its title.
 pub fn codex_rect() -> Option<(i32, i32, i32, i32)> {
@@ -30,10 +53,15 @@ pub fn codex_rect() -> Option<(i32, i32, i32, i32)> {
         let mut pid = 0;
         if !hwnd.is_invalid() { GetWindowThreadProcessId(hwnd, Some(&mut pid)); }
         if hwnd.is_invalid() || !IsWindow(Some(hwnd)).as_bool() || pid != expected_pid {
+            unwatch();
             let mut found = (0isize, 0u32);
             let _ = EnumWindows(Some(visit), LPARAM(&mut found as *mut _ as isize));
             target.set(found);
             hwnd = HWND(found.0 as *mut _);
+            if found.0 != 0 {
+                let hook = SetWinEventHook(EVENT_OBJECT_LOCATIONCHANGE, EVENT_OBJECT_LOCATIONCHANGE, None, Some(location_changed), found.1, 0, WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
+                HOOK.with(|h| h.set(hook.0 as isize));
+            }
         }
         if hwnd.is_invalid() || !IsWindowVisible(hwnd).as_bool() || IsIconic(hwnd).as_bool() { return None; }
         let mut rect = RECT::default();

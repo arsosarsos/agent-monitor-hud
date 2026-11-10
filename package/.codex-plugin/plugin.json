@@ -21,7 +21,7 @@
     "skills":  "./skills/",
     "mcpServers":  "./.mcp.json",
     "interface":  {
-                      "displayName":  "Agent Monitor HUD",
+                      "displayName":  "Agent Monitor HUD AL",
                       "shortDescription":  "Local live monitoring for concurrent Codex, Claude Code and DeepSeek Harness tasks.",
                       "longDescription":  "A native, local-first real-time HUD for concurrent Codex Desktop, VS Code and CLI, Claude Code (desktop Code tab and CLI) and DeepSeek Harness tasks on Windows. Distinct source badges separate every client. Keep one compact summary, expand a stable numbered task list, split selected tasks into independent bubbles, or opt in to source-labeled mid-task notices while the agent keeps working in the background.",
                       "developerName":  "Agent Monitor HUD Contributors",

@@ -23,6 +23,11 @@ pub fn dock_position(edge: Edge, window: (i32, i32, i32, i32), size: (i32, i32),
     }
 }
 
+pub fn dock_surface_position(edge: Edge, window: (i32, i32, i32, i32), size: (i32, i32), offset: i32, inset: i32) -> (i32, i32) {
+    let (x, y) = dock_position(edge, window, ((size.0 - 2 * inset).max(0), (size.1 - 2 * inset).max(0)), offset);
+    (x - inset, y - inset)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -39,5 +44,10 @@ mod tests {
         assert_eq!(nearest_edge((100, 100, 900, 700), (105, 250, 305, 300)), Edge::Left);
         assert_eq!(nearest_edge((100, 100, 900, 700), (698, 250, 898, 300)), Edge::Right);
         assert_eq!(nearest_edge((100, 100, 900, 700), (300, 649, 500, 699)), Edge::Bottom);
+    }
+
+    #[test]
+    fn transparent_padding_does_not_create_a_gap() {
+        assert_eq!(dock_surface_position(Edge::Top, (100, 200, 700, 600), (236, 86), 50, 18), (132, 182));
     }
 }

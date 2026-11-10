@@ -31,6 +31,7 @@ use windows::Win32::UI::WindowsAndMessaging::*;
 use windows::core::{HSTRING, PCWSTR, w};
 
 pub const WM_APP_VIEW: u32 = WM_APP + 1;
+pub const WM_APP_DOCK: u32 = WM_APP + 3;
 const TIMER_ANIM: usize = 1;
 const TIMER_QUIET: usize = 2;
 const TIMER_TOOLTIP: usize = 3;
@@ -175,7 +176,7 @@ pub fn run(args: &[String]) -> i32 {
         let _ = PostMessageW(Some(HWND(main_hwnd as *mut _)), WM_APP_VIEW, WPARAM(0), LPARAM(0));
     });
     let tooltip_surface = Surface::create(&gfx, SURFACE_CLASS, "", WS_EX_TOOLWINDOW | WS_EX_TOPMOST | WS_EX_NOACTIVATE | WS_EX_TRANSPARENT, None).unwrap();
-    let tray = Tray::new(main.hwnd, "Agent Monitor HUD - monitoring");
+    let tray = Tray::new(main.hwnd, "Agent Monitor HUD AL - monitoring");
     let taskbar_created = unsafe { RegisterWindowMessageW(w!("TaskbarCreated")) };
     let app = App {
         last_config_stamp: fsx::stamp(&paths.config_path),
@@ -221,6 +222,7 @@ pub fn run(args: &[String]) -> i32 {
     let main_hwnd = app.main.hwnd;
     let dock_interval = if app.settings.position == "dock-codex" { 16 } else { 500 };
     APP.with(|a| *a.borrow_mut() = Some(app));
+    super::dock_window::initialize(main_hwnd);
     with_app(|app| {
         app.render();
         app.main.show(false);
@@ -241,6 +243,7 @@ pub fn run(args: &[String]) -> i32 {
             }
         }
     }
+    super::dock_window::unwatch();
     APP.with(|a| a.borrow_mut().take());
     0
 }
@@ -279,10 +282,11 @@ fn run_deferred() {
                         app.settings.display_mode.clone(),
                         app.paused,
                         app.settings.mouse_passthrough,
+                        app.settings.position == "dock-codex",
                     )
                 });
-                let Some((hwnd, zh, en, status, mode, paused, passthrough)) = prepared else { continue };
-                let state = MenuState { zh: &zh, en: &en, status, display_mode: &mode, paused, passthrough };
+                let Some((hwnd, zh, en, status, mode, paused, passthrough, docked)) = prepared else { continue };
+                let state = MenuState { zh: &zh, en: &en, status, display_mode: &mode, paused, passthrough, docked };
                 let command = if tray_menu { tray::show_tray_menu(hwnd, &state, at) } else { tray::show_context_menu(hwnd, &state, at) };
                 if let Some(command) = command {
                     with_app_ret(|app| app.menu_command(command));
@@ -335,7 +339,7 @@ fn register_classes() {
 }
 
 fn create_main_window(gfx: &Gfx, topmost: bool) -> Option<Surface> {
-    Surface::create(gfx, PCWSTR(control::main_class().as_ptr()), "Agent Monitor HUD", WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE | if topmost { WS_EX_TOPMOST } else { WINDOW_EX_STYLE(0) }, None)
+    Surface::create(gfx, PCWSTR(control::main_class().as_ptr()), "Agent Monitor HUD AL", WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE | if topmost { WS_EX_TOPMOST } else { WINDOW_EX_STYLE(0) }, None)
 }
 
 fn lparam_point(lp: LPARAM) -> (i32, i32) {
@@ -444,6 +448,10 @@ impl App {
         match msg {
             WM_APP_VIEW => {
                 self.on_view();
+                Some(LRESULT(0))
+            }
+            WM_APP_DOCK => {
+                self.update_dock();
                 Some(LRESULT(0))
             }
             WM_TIMER => {
@@ -712,7 +720,7 @@ impl App {
                 "bottom" => super::dock_geometry::Edge::Bottom,
                 _ => super::dock_geometry::Edge::Top,
             };
-            super::dock_window::codex_rect().map(|rect| super::dock_geometry::dock_position(edge, rect, (w, h), self.document["dockOffset"].as_i64().unwrap_or(0).clamp(0, i32::MAX as i64) as i32)).unwrap_or(self.main.pos)
+            super::dock_window::codex_rect().map(|rect| super::dock_geometry::dock_surface_position(edge, rect, (w, h), self.document["dockOffset"].as_i64().unwrap_or(0).clamp(0, i32::MAX as i64) as i32, inset)).unwrap_or(self.main.pos)
         } else if s.position == "custom" {
             let left = s.custom_left.map(|v| (v * scale as f64).round() as i32).unwrap_or(self.main.pos.0 + inset);
             let top = s.custom_top.map(|v| (v * scale as f64).round() as i32).unwrap_or(self.main.pos.1 + inset);
@@ -1261,7 +1269,7 @@ impl App {
             let old = self.main.pos;
             self.position_main();
             if old != self.main.pos {
-                self.paint(self.main.hwnd);
+                if self.main.transitioning() { self.paint(self.main.hwnd); } else { self.main.present(); }
                 self.position_bubbles();
                 for bubble in self.bubbles.values_mut() { bubble.surface.present(); }
             }
@@ -1496,9 +1504,10 @@ impl App {
                 if hwnd == self.main.hwnd {
                     if self.settings.position == "dock-codex" {
                         if let Some(rect) = super::dock_window::codex_rect() {
-                            let (x, y) = self.main.pos;
+                            let inset = (hud::MAIN_INSET * self.main.scale).round() as i32;
+                            let (x, y) = (self.main.pos.0 + inset, self.main.pos.1 + inset);
                             let (w, h) = self.main.px_size();
-                            let edge = super::dock_geometry::nearest_edge(rect, (x, y, x + w, y + h));
+                            let edge = super::dock_geometry::nearest_edge(rect, (x, y, x + w - 2 * inset, y + h - 2 * inset));
                             let (name, offset) = match edge {
                                 super::dock_geometry::Edge::Left => ("left", y - rect.1),
                                 super::dock_geometry::Edge::Right => ("right", y - rect.1),
@@ -1722,6 +1731,19 @@ impl App {
                 self.paused = !self.paused;
                 self.engine.send(Command::Pause(self.paused));
             }
+            MenuCommand::ToggleDock => {
+                if self.settings.position == "dock-codex" {
+                    let scale = self.main.dpi() as f64;
+                    let inset = (hud::MAIN_INSET * self.main.scale) as f64;
+                    self.document["customLeft"] = json::number((self.main.pos.0 as f64 + inset) / scale);
+                    self.document["customTop"] = json::number((self.main.pos.1 as f64 + inset) / scale);
+                    self.document["position"] = Value::from("custom");
+                } else {
+                    self.document["position"] = Value::from("dock-codex");
+                }
+                self.save_settings();
+                self.render();
+            }
             MenuCommand::ResetPosition => {
                 if self.settings.position == "custom" {
                     self.document["position"] = Value::from("top-right");
@@ -1784,7 +1806,7 @@ impl App {
     }
 
     fn tray_tip(&self) -> String {
-        if self.settings.mouse_passthrough { "Agent Monitor HUD - click-through ON".into() } else { "Agent Monitor HUD - monitoring".into() }
+        if self.settings.mouse_passthrough { "Agent Monitor HUD AL - click-through ON".into() } else { "Agent Monitor HUD AL - monitoring".into() }
     }
 
     fn update_tray(&mut self) {
@@ -1805,6 +1827,7 @@ impl App {
         let previous_position = self.settings.position.clone();
         self.settings = Settings::from(&self.document);
         if self.settings.position != previous_position {
+            if self.settings.position != "dock-codex" { super::dock_window::unwatch(); }
             unsafe { SetTimer(Some(self.main.hwnd), TIMER_DOCK, if self.settings.position == "dock-codex" { 16 } else { 500 }, None); }
         }
         if self.settings.display_mode != previous_mode {

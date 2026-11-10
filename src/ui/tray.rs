@@ -22,12 +22,13 @@ pub enum MenuCommand {
     Split = 108,
     MergeAll = 109,
     Exit = 110,
+    ToggleDock = 111,
 }
 
 impl MenuCommand {
     pub fn from_id(id: u32) -> Option<MenuCommand> {
         use MenuCommand::*;
-        [Settings, TogglePassthrough, DisablePassthrough, TogglePause, ResetPosition, Summary, List, Split, MergeAll, Exit]
+        [Settings, TogglePassthrough, DisablePassthrough, TogglePause, ResetPosition, Summary, List, Split, MergeAll, Exit, ToggleDock]
             .into_iter()
             .find(|c| *c as u32 == id)
     }
@@ -116,6 +117,7 @@ pub struct MenuState<'a> {
     pub display_mode: &'a str,
     pub paused: bool,
     pub passthrough: bool,
+    pub docked: bool,
 }
 
 unsafe fn append(menu: HMENU, id: u32, text: &str, checked: bool, enabled: bool) {
@@ -158,6 +160,7 @@ pub fn show_context_menu(owner: HWND, state: &MenuState, at: POINT) -> Option<Me
             true,
         );
         append(menu, MenuCommand::TogglePause as u32, &bi(state.zh, state.en, if state.paused { "resume" } else { "pause" }), false, true);
+        append(menu, MenuCommand::ToggleDock as u32, &bi(state.zh, state.en, if state.docked { "undockCodex" } else { "dockCodex" }), false, true);
         append(menu, MenuCommand::ResetPosition as u32, &bi(state.zh, state.en, "resetPosition"), false, true);
         let sub = view_submenu(state);
         let _ = AppendMenuW(menu, MF_POPUP, sub.0 as usize, &HSTRING::from(bi(state.zh, state.en, "displayMode")));
@@ -178,6 +181,7 @@ pub fn show_tray_menu(owner: HWND, state: &MenuState, at: POINT) -> Option<MenuC
         let _ = AppendMenuW(menu, MF_POPUP, sub.0 as usize, &HSTRING::from(bi(state.zh, state.en, "displayMode")));
         append(menu, MenuCommand::DisablePassthrough as u32, &bi(state.zh, state.en, "disableMousePassthrough"), false, state.passthrough);
         append(menu, MenuCommand::TogglePause as u32, &bi(state.zh, state.en, if state.paused { "resume" } else { "pause" }), false, true);
+        append(menu, MenuCommand::ToggleDock as u32, &bi(state.zh, state.en, if state.docked { "undockCodex" } else { "dockCodex" }), false, true);
         let _ = AppendMenuW(menu, MF_SEPARATOR, 0, PCWSTR::null());
         append(menu, MenuCommand::Exit as u32, &format!("{} HUD / {} HUD", state.zh.get("exit"), state.en.get("exit")), false, true);
         track(owner, menu, at)

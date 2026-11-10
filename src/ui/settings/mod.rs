@@ -177,7 +177,7 @@ pub fn open(app: &mut App) {
         app.settings_window = Some(window);
         return;
     }
-    let Some(surface) = Surface::create(&app.gfx, SETTINGS_CLASS, "Agent Monitor HUD - Settings", WS_EX_APPWINDOW | WS_EX_TOPMOST, None) else { return };
+    let Some(surface) = Surface::create(&app.gfx, SETTINGS_CLASS, "Agent Monitor HUD AL - Settings", WS_EX_APPWINDOW | WS_EX_TOPMOST, None) else { return };
     let Some(tip) = Surface::create(&app.gfx, SETTINGS_CLASS, "", WS_EX_TOOLWINDOW | WS_EX_TOPMOST | WS_EX_NOACTIVATE | WS_EX_TRANSPARENT, Some(surface.hwnd)) else { return };
     unsafe {
         DragAcceptFiles(surface.hwnd, true);

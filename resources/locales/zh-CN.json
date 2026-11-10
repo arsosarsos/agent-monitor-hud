@@ -1,5 +1,7 @@
 {
-  "appName": "Agent Monitor HUD",
+  "appName": "Agent Monitor HUD AL",
+  "dockCodex": "贴靠 Codex",
+  "undockCodex": "脱离 Codex",
   "waiting": "等待产生用量记录…",
   "noActiveTasks": "当前没有活动的任务",
   "paused": "监控已暂停",
