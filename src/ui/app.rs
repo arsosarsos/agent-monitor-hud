@@ -35,6 +35,7 @@ const TIMER_ANIM: usize = 1;
 const TIMER_QUIET: usize = 2;
 const TIMER_TOOLTIP: usize = 3;
 const TIMER_HOST: usize = 4;
+const TIMER_DOCK: usize = 5;
 const SURFACE_CLASS: PCWSTR = w!("AgentMonitorHUD.Surface");
 
 thread_local! {
@@ -218,6 +219,7 @@ pub fn run(args: &[String]) -> i32 {
         animating: false,
     };
     let main_hwnd = app.main.hwnd;
+    let dock_interval = if app.settings.position == "dock-codex" { 16 } else { 500 };
     APP.with(|a| *a.borrow_mut() = Some(app));
     with_app(|app| {
         app.render();
@@ -229,6 +231,7 @@ pub fn run(args: &[String]) -> i32 {
     unsafe {
         SetTimer(Some(main_hwnd), TIMER_QUIET, 500, None);
         SetTimer(Some(main_hwnd), TIMER_HOST, 2000, None);
+        SetTimer(Some(main_hwnd), TIMER_DOCK, dock_interval, None);
         let mut msg = MSG::default();
         while GetMessageW(&mut msg, None, 0, 0).as_bool() {
             let handled = with_app_ret(|app| app.settings_window.as_mut().is_some_and(|s| s.pre_translate(&msg))).unwrap_or(false);
@@ -449,6 +452,7 @@ impl App {
                     TIMER_QUIET => self.on_quiet_tick(),
                     TIMER_TOOLTIP => self.show_pending_tooltip(),
                     TIMER_HOST => self.on_host_tick(),
+                    TIMER_DOCK => self.update_dock(),
                     _ => {}
                 }
                 Some(LRESULT(0))
@@ -1227,7 +1231,6 @@ impl App {
     }
 
     fn on_quiet_tick(&mut self) {
-        self.update_dock();
         let before = (self.quiet, self.bubbles.values().map(|b| b.collapsed).collect::<Vec<_>>());
         self.update_quiet();
         let after = (self.quiet, self.bubbles.values().map(|b| b.collapsed).collect::<Vec<_>>());
@@ -1242,14 +1245,17 @@ impl App {
 
     fn update_dock(&mut self) {
         let attached = self.settings.position == "dock-codex";
+        if !attached && !self.dock_hidden { return; }
         let unavailable = attached && super::dock_window::codex_rect().is_none();
         if unavailable && !self.dock_hidden {
             self.dock_hidden = true;
+            unsafe { SetTimer(Some(self.main.hwnd), TIMER_DOCK, 500, None); }
             self.main.hide();
             for bubble in self.bubbles.values_mut() { bubble.surface.hide(); }
             if let Some((_, _, surface)) = self.notice.as_mut() { surface.hide(); }
         } else if !unavailable && self.dock_hidden {
             self.dock_hidden = false;
+            unsafe { SetTimer(Some(self.main.hwnd), TIMER_DOCK, if attached { 16 } else { 500 }, None); }
             if !self.hidden { self.main.show(false); self.render(); }
         } else if attached && !self.hidden && !unavailable && self.drag.is_none() {
             let old = self.main.pos;
@@ -1796,7 +1802,11 @@ impl App {
 
     pub fn apply_document(&mut self) {
         let previous_mode = self.settings.display_mode.clone();
+        let previous_position = self.settings.position.clone();
         self.settings = Settings::from(&self.document);
+        if self.settings.position != previous_position {
+            unsafe { SetTimer(Some(self.main.hwnd), TIMER_DOCK, if self.settings.position == "dock-codex" { 16 } else { 500 }, None); }
+        }
         if self.settings.display_mode != previous_mode {
             self.list_override = None;
         }
