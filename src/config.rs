@@ -619,6 +619,13 @@ pub fn status_palette(name: &str) -> Option<[(&'static str, &'static str); 8]> {
 mod tests {
     use super::*;
     #[test]
+    fn al_build_uses_english_for_existing_language_settings() {
+        let mut d = defaults();
+        d["language"] = Value::from("zh-CN");
+        normalize(&mut d, &[]);
+        assert_eq!(d["language"], "en");
+    }
+    #[test]
     fn merge_keeps_known_keys_and_kinds() {
         let mut d = defaults();
         let saved = serde_json::json!({"fontSize": "big", "opacity": 0.5, "unknown": 1, "customLeft": 12.5,
